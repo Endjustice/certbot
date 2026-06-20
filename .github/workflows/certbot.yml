@@ -1,0 +1,50 @@
+name: Generate SSL Certificate
+
+on:
+  workflow_dispatch: # به تو اجازه می‌دهد هر زمان خواستی دستی دکمه Run را بزنی
+
+jobs:
+  generate-cert:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Certbot and Cloudflare Plugin
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y certbot python3-certbot-dns-cloudflare
+
+    - name: Prepare Cloudflare Credentials
+      run: |
+        mkdir -p ~/.secrets/certbot
+        echo "dns_cloudflare_api_token = ${{ secrets.CLOUDFLARE_API_TOKEN }}" > ~/.secrets/certbot/cloudflare.ini
+        chmod 600 ~/.secrets/certbot/cloudflare.ini
+
+    - name: Request Certificate via Certbot
+      run: |
+        sudo certbot certonly \
+          --dns-cloudflare \
+          --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
+          --dns-cloudflare-propagation-seconds 20 \
+          --agree-tos \
+          --email info@alizadeh-stationery.ir \
+          --non-interactive \
+          -d alizadeh-stationery.ir \
+          -d api.alizadeh-stationery.ir
+
+    - name: Prepare Certificates for Download
+      run: |
+        mkdir -p ./certs
+        sudo cp -L /etc/letsencrypt/live/alizadeh-stationery.ir/fullchain.pem ./certs/
+        sudo cp -L /etc/letsencrypt/live/alizadeh-stationery.ir/privkey.pem ./certs/
+        sudo chown -R $USER:$USER ./certs
+
+    - name: Upload Certificates as Artifact (Download Link)
+      uses: actions/artifacts@v4
+      with:
+        name: ssl-certificates
+        path: ./certs/
+        retention-days: 1 # فایل فقط ۱ روز برای دانلود باقی می‌ماند تا امن باشد
+        
