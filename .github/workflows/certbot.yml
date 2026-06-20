@@ -42,7 +42,7 @@ jobs:
         sudo chown -R $USER:$USER ./certs
 
     - name: Upload Certificates as Artifact (Download Link)
-      uses: actions/artifacts@v4
+      uses: actions/upload-artifact@v4
       with:
         name: ssl-certificates
         path: ./certs/
